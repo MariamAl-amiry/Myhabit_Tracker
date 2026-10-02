@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متتبع العادات - Habit Tracker</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --primary-hover: #5b4bc4;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --card-hover: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --danger: #ef4444;
+            --success: #10b981;
+            --gold: #f59e0b;
+        }
+
+        /* VIP Themes */
+        body.theme-gold {
+            --primary: #f59e0b;
+            --primary-hover: #d97706;
+            --bg: #1c1917;
+            --card: #292524;
+            --card-hover: #44403c;
+            --border: #78350f;
+        }
+
+        body.theme-neon {
+            --primary: #06b6d4;
+            --primary-hover: #0891b2;
+            --bg: #090d16;
+            --card: #111827;
+            --card-hover: #1f2937;
+            --border: #1e3a8a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header & Streak Card */
+        .header-card {
+            background-color: var(--card);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .level-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .level-badge {
+            background: rgba(108, 92, 231, 0.2);
+            color: #a29bfe;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(108, 92, 231, 0.4);
+        }
+
+        .xp-bar-container {
+            width: 220px;
+            height: 10px;
+            background-color: #0f172a;
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .xp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #a29bfe);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .xp-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .coins-text {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #fbbf24;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 4px;
+        }
+
+        /* Streak Flame & Avatar Styling */
+        .flame-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            position: relative;
+        }
+
+        .flame-wrapper {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .equipped-hat-img {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .flame-svg {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.15));
+        }
+
+        .streak-count {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 8px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background-color: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: var(--text);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Views Container */
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Add Habit Form */
+        .add-habit-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-field {
+            flex: 1;
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+        }
+
+        .textarea-field {
+            width: 100%;
+            height: 110px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .btn-success:hover {
+            opacity: 0.9;
+        }
+
+        /* Habit Items */
+        .habit-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .habit-card {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.2s ease;
+        }
+
+        .habit-card:hover {
+            transform: translateY(-2px);
+            background-color: var(--card-hover);
+        }
+
+        .habit-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .check-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 2px solid var(--border);
+            background: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .check-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .habit-card.completed .check-btn {
+            background-color: var(--success);
+            border-color: var(--success);
+        }
+
+        .habit-title {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .habit-card.completed .habit-title {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .delete-btn:hover {
+            color: var(--danger);
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        /* History Grouped By Day */
+        .history-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .history-group-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #a29bfe;
+            padding: 4px 8px;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .history-card {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-title {
+            font-weight: 500;
+            color: #e2e8f0;
+        }
+
+        .history-time {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: #0f172a;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        /* Vertical Store Layout */
+        .vertical-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .store-item-row {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .store-item-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .store-item-img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+
+        .store-item-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .store-item-name {
+            font-weight: 700;
+            color: #f8fafc;
+            font-size: 1rem;
+        }
+
+        .store-item-price {
+            color: #fbbf24;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+
+        .grid-inventory {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .inventory-card {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            text-align: center;
+        }
+
+        /* Modal Popup For Weekly Check-in */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .checkin-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .checkin-day {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+        }
+
+        .checkin-day.checked {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .checkin-day.final-reward {
+            border-color: var(--gold);
+            background: rgba(245, 158, 11, 0.15);
+        }
+
+        /* Chart Controls */
+        .chart-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .sub-tab-btn {
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .sub-tab-btn.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .chart-card {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 30px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Weekly Check-in Modal Window -->
+    <div id="checkinModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <h2 style="color: var(--gold);">تسجيل الحضور الأسبوعي 📅</h2>
+            <p style="font-size: 0.9rem; color: var(--text-muted);">سجل حضورك يومياً للحصول على ملابس وعناصر خاصة في اليوم السابع!</p>
+            
+            <div class="checkin-grid" id="checkinGrid"></div>
+
+            <button id="claimCheckinBtn" class="btn-primary" onclick="claimDailyCheckin()">تسجيل حضور اليوم ✨</button>
+            <button class="sub-tab-btn" style="margin-top: -10px;" onclick="closeModal()">إغلاق</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+
+        <!-- Header / User Profile -->
+        <div class="header-card">
+            <div class="user-stats">
+                <div class="level-title">
+                    <span id="levelName">Initiate</span>
+                    <span class="level-badge" id="levelNum">المستوى 1</span>
+                </div>
+                <div class="xp-bar-container">
+                    <div class="xp-bar-fill" id="xpFill"></div>
+                </div>
+                <div class="xp-text">
+                    <img src="1 (14).png" width="16" alt="XP">
+                    <span id="xpText">0 / 100 XP</span>
+                </div>
+                <div class="coins-text">
+                    <span id="coinsDisplay">0</span> <img src="1 (9).png" width="18" alt="Coins">
+                </div>
+                <div style="font-size: 0.8rem; color: #38bdf8; margin-top: 4px;" id="shieldsDisplay">الدروع المتاحة: 1</div>
+            </div>
+
+            <!-- TikTok Inspired Streak Flame -->
+            <div class="flame-container">
+                <div class="flame-wrapper">
+                    <div id="equippedHatSlot"></div>
+                    <div id="flameGraphic"></div>
+                </div>
+                <div class="streak-count" id="streakDisplay">0 أيام</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs (تم استرجاع الحقيبة بدون إيموجي) -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('habits')">العادات اليومية</button>
+            <button class="tab-btn" onclick="switchTab('history')">الإنجازات</button>
+            <button class="tab-btn" onclick="switchTab('notes')">Notes</button>
+            <button class="tab-btn" onclick="switchTab('store')">المتجر</button>
+            <button class="tab-btn" onclick="switchTab('inventory')">الحقيبة</button>
+            <button class="tab-btn" onclick="switchTab('vip')" style="color: var(--gold);">VIP</button>
+            <button class="tab-btn" onclick="switchTab('analytics')">الرسم البياني</button>
+        </div>
+
+        <!-- Tab 1: Habits View -->
+        <div id="habitsTab" class="tab-content active">
+            <form class="add-habit-form" onsubmit="addHabit(event)">
+                <input type="text" id="habitInput" class="input-field" placeholder="اكتب عادة جديدة هنا..." required>
+                <button type="submit" class="btn-primary">إضافة</button>
+            </form>
+
+            <div class="habit-list" id="habitList"></div>
+        </div>
+
+        <!-- Tab 2: History View -->
+        <div id="historyTab" class="tab-content">
+            <div id="historyList"></div>
+        </div>
+
+        <!-- Tab 3: Notes View -->
+        <div id="notesTab" class="tab-content">
+            <form class="add-habit-form" style="flex-direction: column;" onsubmit="addNote(event)">
+                <textarea id="noteInput" class="input-field textarea-field" placeholder="اكتب مذكراتك أو أفكارك اليومية هنا..." required></textarea>
+                <button type="submit" class="btn-primary" style="align-self: flex-start;">حفظ المذكرة</button>
+            </form>
+
+            <div class="habit-list" id="notesList" style="margin-top: 10px;"></div>
+        </div>
+
+        <!-- Tab 4: Store View -->
+        <div id="storeTab" class="tab-content">
+            <div class="chart-card">
+                <h3 style="color: #f8fafc; margin-bottom: 20px; text-align: center;">المتجر</h3>
+                <div class="vertical-list">
+                    
+                    <div class="store-item-row">
+                        <div class="store-item-info">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="rgba(56, 189, 248, 0.2)" stroke="#38bdf8" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                            <div class="store-item-details">
+                                <div class="store-item-name">درع الحماية</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">يحمي سلسلتك من الانكسار إذا فاتك يوم واحد.</div>
+                            </div>
+                        </div>
+                        <button class="btn-primary" style="display: flex; align-items: center; gap: 6px; background-color: #10b981;" onclick="buyShieldRealMoney()">
+                            شراء (1.99$) <img src="1 (1).png" width="18" alt="Real Money">
+                        </button>
+                    </div>
+
+                    <div id="storeItemsContainer" class="vertical-list"></div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 5: Inventory View (الحقيبة) -->
+        <div id="inventoryTab" class="tab-content">
+            <div class="chart-card">
+                <h3 style="color: #f8fafc; margin-bottom: 20px; text-align: center;">حقيبة المقتنيات</h3>
+                <div id="inventoryContainer" class="grid-inventory"></div>
+            </div>
+        </div>
+
+        <!-- Tab 6: VIP View -->
+        <div id="vipTab" class="tab-content">
+            <div class="chart-card" style="text-align: center; padding: 30px 20px;">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" style="margin-bottom: 15px;">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <h2 style="color: var(--gold); margin-bottom: 10px;">عضوية VIP الحصرية</h2>
+                <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6;">
+                    احصل على ثيمات ألوان خاصة للبرنامج، دروع غير محدودة، مكافآت أسبوعية، و **5 XP** لكل إنجاز!
+                </p>
+                
+                <div id="vipStatusContainer">
+                    <button class="btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 1.1rem; padding: 14px 30px;" onclick="subscribeVIP()">
+                        الاشتراك الآن ($1.99 أسبوعياً)
+                    </button>
+                </div>
+
+                <div id="vipThemesSection" style="margin-top: 25px; display: none;">
+                    <h4 style="color: #f8fafc; margin-bottom: 10px;">اختيار ثيم التطبيق الخاص:</h4>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="sub-tab-btn" onclick="setAppTheme('default')">الافتراضي 🌌</button>
+                        <button class="sub-tab-btn" onclick="setAppTheme('gold')">الذهبي الملكي 👑</button>
+                        <button class="sub-tab-btn" onclick="setAppTheme('neon')">النيون الأزرق ⚡</button>
+                    </div>
+                    <button class="btn-primary" style="margin-top: 15px; background-color: #10b981;" onclick="claimWeeklyReward()">مطالبة بالمكافأة الأسبوعية 🎁 (+50 عملة)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 7: Analytics View -->
+        <div id="analyticsTab" class="tab-content">
+            <div class="chart-controls">
+                <button class="sub-tab-btn active" onclick="switchChartType('weekly')">أسبوعي</button>
+                <button class="sub-tab-btn" onclick="switchChartType('yearly')">سنوي</button>
+            </div>
+            <div class="chart-card">
+                <canvas id="progressChart" height="200"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const storeCatalog = [
+            { id: 'chef_hat', name: 'قبعة الطاهي', price: 150, image: '1 (2).png' },
+            { id: 'guitar', name: 'جيتار كلاسيكي', price: 300, image: '1 (3).png' },
+            { id: 'sprout', name: 'نبتة صغيرة', price: 50, image: '1 (4).png' },
+            { id: 'strawberry', name: 'فراولة', price: 25, image: '1 (5).png' },
+            { id: 'sun_hat', name: 'قبعة شمس', price: 100, image: '1 (6).png' },
+            { id: 'cowboy_hat', name: 'قبعة رعاة البقر', price: 200, image: '1 (7).png' },
+            { id: 'cap', name: 'قبعة رياضية', price: 120, image: '1 (8).png' }
+        ];
+
+        let state = {
+            level: 1,
+            xp: 0,
+            coins: 0,
+            streak: 1,
+            habits: [],
+            history: [],
+            notes: [],
+            shields: 1,
+            flameFrozen: false,
+            inventory: [],
+            equippedItem: null,
+            isVip: false,
+            theme: 'default',
+            weeklyCheckinDays: 0,
+            lastCheckinDate: null,
+            lastVisit: new Date().toDateString()
+        };
+
+        let currentChartType = 'weekly';
+
+        function loadState() {
+            const saved = localStorage.getItem('habit_tracker_data');
+            if (saved) {
+                state = JSON.parse(saved);
+                if (!state.notes) state.notes = [];
+                if (!state.inventory) state.inventory = [];
+                if (typeof state.coins === 'undefined') state.coins = 0;
+                if (typeof state.shields === 'undefined') state.shields = 1;
+                if (typeof state.isVip === 'undefined') state.isVip = false;
+                if (!state.theme) state.theme = 'default';
+                if (typeof state.weeklyCheckinDays === 'undefined') state.weeklyCheckinDays = 0;
+                if (!state.lastVisit) state.lastVisit = new Date().toDateString();
+            }
+
+            setAppTheme(state.theme);
+            checkDailyPopup();
+            updateUI();
+        }
+
+        function saveState() {
+            localStorage.setItem('habit_tracker_data', JSON.stringify(state));
+        }
+
+        /* Checkin Modal Popup Logic */
+        function checkDailyPopup() {
+            const todayStr = new Date().toDateString();
+            if (state.lastCheckinDate !== todayStr) {
+                renderCheckinGrid();
+                document.getElementById('checkinModal').style.display = 'flex';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('checkinModal').style.display = 'none';
+        }
+
+        function renderCheckinGrid() {
+            const grid = document.getElementById('checkinGrid');
+            const days = ['يوم 1', 'يوم 2', 'يوم 3', 'يوم 4', 'يوم 5', 'يوم 6', 'يوم 7 🎁'];
+            
+            grid.innerHTML = days.map((d, index) => {
+                const isChecked = index < state.weeklyCheckinDays;
+                const isFinal = index === 6;
+                return `
+                <div class="checkin-day ${isChecked ? 'checked' : ''} ${isFinal ? 'final-reward' : ''}">
+                    <span>${d}</span>
+                    <span>${isChecked ? '✅' : '🔒'}</span>
+                </div>
+                `;
+            }).join('');
+
+            const todayStr = new Date().toDateString();
+            const btn = document.getElementById('claimCheckinBtn');
+            if (state.lastCheckinDate === todayStr) {
+                btn.disabled = true;
+                btn.textContent = 'تم تسجيل حضور اليوم';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'تسجيل حضور اليوم ✨';
+            }
+        }
+
+        function claimDailyCheckin() {
+            const todayStr = new Date().toDateString();
+            if (state.lastCheckinDate === todayStr) return;
+
+            state.weeklyCheckinDays++;
+            state.lastCheckinDate = todayStr;
+
+            if (state.weeklyCheckinDays >= 7) {
+                alert("تهانينا! أكملت حضور 7 أيام وحصلت على قبعة رعاة البقر الحصرية! 👑");
+                if (!state.inventory.includes('cowboy_hat')) {
+                    state.inventory.push('cowboy_hat');
+                }
+                state.weeklyCheckinDays = 0;
+            } else {
+                alert(`تم تسجيل الحضور ليوم ${state.weeklyCheckinDays}! واصل الحضور لمكافأة اليوم السابع.`);
+            }
+
+            saveState();
+            renderCheckinGrid();
+            updateUI();
+        }
+
+        /* Theme & VIP Logic */
+        function setAppTheme(themeName) {
+            document.body.className = '';
+            if (themeName !== 'default') {
+                document.body.classList.add(`theme-${themeName}`);
+            }
+            state.theme = themeName;
+            saveState();
+        }
+
+        function subscribeVIP() {
+            alert("تم الاشتراك بنجاح في عضوية VIP الأسبوعية مقابل $1.99!");
+            state.isVip = true;
+            saveState();
+            updateUI();
+        }
+
+        function claimWeeklyReward() {
+            state.coins += 50;
+            alert("تم المطالبة بمكافأة الـ VIP الأسبوعية (+50 عملة)!");
+            saveState();
+            updateUI();
+        }
+
+        /* Tab Switch */
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            if (tabName === 'habits') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('habitsTab').classList.add('active');
+            } else if (tabName === 'history') {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('historyTab').classList.add('active');
+                renderHistoryGrouped();
+            } else if (tabName === 'notes') {
+                document.querySelectorAll('.tab-btn')[2].classList.add('active');
+                document.getElementById('notesTab').classList.add('active');
+                renderNotes();
+            } else if (tabName === 'store') {
+                document.querySelectorAll('.tab-btn')[3].classList.add('active');
+                document.getElementById('storeTab').classList.add('active');
+                renderStore();
+            } else if (tabName === 'inventory') {
+                document.querySelectorAll('.tab-btn')[4].classList.add('active');
+                document.getElementById('inventoryTab').classList.add('active');
+                renderInventory();
+            } else if (tabName === 'vip') {
+                document.querySelectorAll('.tab-btn')[5].classList.add('active');
+                document.getElementById('vipTab').classList.add('active');
+            } else if (tabName === 'analytics') {
+                document.querySelectorAll('.tab-btn')[6].classList.add('active');
+                document.getElementById('analyticsTab').classList.add('active');
+                renderChart();
+            }
+        }
+
+        function getLevelTitle(level) {
+            if (level >= 60) return "Legendary";
+            if (level >= 50) return "Fearless";
+            if (level >= 40) return "Relentless";
+            if (level >= 30) return "Persistent";
+            if (level >= 10) return "Initiate";
+            return "Initiate";
+        }
+
+        function renderFlame(level) {
+            let color = "#94a3b8"; 
+            let size = 48;
+            let showCrown = false;
+
+            if (level >= 60) {
+                color = "#06b6d4"; 
+                size = 64;
+                showCrown = true;
+            } else if (level >= 40) {
+                color = "#06b6d4"; 
+            } else if (level >= 30) {
+                color = "#3b82f6"; 
+                size = 56;
+            } else if (level >= 11) {
+                color = "#ef4444"; 
+                size = 52;
+            }
+
+            const crownSVG = showCrown ? `
+            <path d="M12 2 L15 7 L20 4 L18 11 L6 11 L4 4 L9 7 Z" fill="#f59e0b" stroke="#d97706" stroke-width="1"/>
+            ` : '';
+
+            const svgHTML = `
+            <svg width="${size}" height="${size + (showCrown ? 10 : 0)}" viewBox="0 0 24 28" class="flame-svg" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(0, ${showCrown ? 4 : 0})">
+            ${crownSVG}
+            <path d="M12 2 C12 2 16 6 16 11 C16 13 17 14 19 14 C19 19 15 23 12 23 C9 23 5 19 5 14 C7 14 8 13 8 11 C8 6 12 2 12 2 Z" fill="${color}" />
+            <path d="M8.5 12.5 L10.5 13.5" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M15.5 12.5 L13.5 13.5" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M9.5 16.5 C11 18.5 13 18.5 14.5 16.5" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+            </g>
+            </svg>
+            `;
+
+            document.getElementById('flameGraphic').innerHTML = svgHTML;
+
+            const equippedSlot = document.getElementById('equippedHatSlot');
+            if (state.equippedItem) {
+                const item = storeCatalog.find(i => i.id === state.equippedItem);
+                if (item) {
+                    equippedSlot.innerHTML = `<img src="${item.image}" class="equipped-hat-img" alt="Equipped Hat">`;
+                } else {
+                    equippedSlot.innerHTML = '';
+                }
+            } else {
+                equippedSlot.innerHTML = '';
+            }
+        }
+
+        function buyShieldRealMoney() {
+            alert("سيتم توجيهك إلى بوابة الدفع لشراء الدرع بأموال حقيقية ($1.99).");
+        }
+
+        function buyItem(itemId) {
+            const item = storeCatalog.find(i => i.id === itemId);
+            if (!item) return;
+
+            if (state.inventory.includes(itemId)) {
+                alert("تمتلك هذا العنصر بالفعل!");
+                return;
+            }
+
+            if (state.coins >= item.price) {
+                state.coins -= item.price;
+                state.inventory.push(itemId);
+                alert(`تم شراء ${item.name}!`);
+                saveState();
+                updateUI();
+                renderStore();
+            } else {
+                alert("لا تملك عملات كافية للشراء.");
+            }
+        }
+
+        function toggleEquipItem(itemId) {
+            if (state.equippedItem === itemId) {
+                state.equippedItem = null;
+            } else {
+                state.equippedItem = itemId;
+            }
+            saveState();
+            updateUI();
+            renderInventory();
+        }
+
+        function renderStore() {
+            const container = document.getElementById('storeItemsContainer');
+            container.innerHTML = storeCatalog.map(item => {
+                const isOwned = state.inventory.includes(item.id);
+                return `
+                <div class="store-item-row">
+                    <div class="store-item-info">
+                        <img src="${item.image}" class="store-item-img" alt="${item.name}">
+                        <div class="store-item-details">
+                            <div class="store-item-name">${item.name}</div>
+                            <div class="store-item-price">
+                                ${item.price} <img src="1 (9).png" width="16" alt="Coins">
+                            </div>
+                        </div>
+                    </div>
+                    ${isOwned 
+                        ? `<button class="btn-primary" style="background-color: var(--card-hover); color: var(--text-muted); cursor: default;" disabled>تم الشراء</button>` 
+                        : `<button class="btn-primary" onclick="buyItem('${item.id}')">شراء</button>`
+                    }
+                </div>
+                `;
+            }).join('');
+        }
+
+        function renderInventory() {
+            const container = document.getElementById('inventoryContainer');
+            if (!state.inventory || state.inventory.length === 0) {
+                container.innerHTML = `<div class="empty-msg" style="grid-column: 1/-1;">حقيبتك فارغة حالياً. قم بشراء بعض العناصر من المتجر لتظهر هنا!</div>`;
+                return;
+            }
+
+            container.innerHTML = state.inventory.map(itemId => {
+                const item = storeCatalog.find(i => i.id === itemId);
+                if (!item) return '';
+
+                const isEquipped = state.equippedItem === itemId;
+
+                return `
+                <div class="inventory-card">
+                    <img src="${item.image}" style="height: 60px; object-fit: contain;" alt="${item.name}">
+                    <div style="font-weight: 700; color: #f8fafc;">${item.name}</div>
+                    <button class="${isEquipped ? 'btn-primary' : 'btn-success'}" style="width: 100%;" onclick="toggleEquipItem('${item.id}')">
+                        ${isEquipped ? 'إلغاء التجهيز' : 'تجهيز'}
+                    </button>
+                </div>
+                `;
+            }).join('');
+        }
+
+        /* Habits Logic */
+        function addHabit(e) {
+            e.preventDefault();
+            const input = document.getElementById('habitInput');
+            const title = input.value.trim();
+            if (!title) return;
+
+            const habit = {
+                id: Date.now(),
+                title: title,
+                completed: false,
+                completedAt: null
+            };
+
+            state.habits.push(habit);
+            input.value = '';
+            saveState();
+            updateUI();
+        }
+
+        function toggleHabit(id) {
+            const habit = state.habits.find(h => h.id === id);
+            if (!habit || habit.completed) return; 
+
+            habit.completed = true;
+            habit.completedAt = Date.now();
+
+            const gainedXp = state.isVip ? 5 : 3;
+            state.xp += gainedXp;
+            state.coins += 5;
+            
+            if (state.xp >= 100) {
+                state.level += 1;
+                state.xp = state.xp - 100;
+            }
+
+            const now = new Date();
+            const dayDateKey = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+            const timeString = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+            state.history.unshift({
+                id: Date.now(),
+                title: habit.title,
+                dayDate: dayDateKey,
+                time: timeString,
+                xpGained: gainedXp,
+                timestamp: Date.now()
+            });
+
+            saveState();
+            updateUI();
+        }
+
+        function deleteHabit(id) {
+            state.habits = state.habits.filter(h => h.id !== id);
+            saveState();
+            updateUI();
+        }
+
+        function addNote(e) {
+            e.preventDefault();
+            const input = document.getElementById('noteInput');
+            const content = input.value.trim();
+            if (!content) return;
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+            state.notes.unshift({
+                id: Date.now(),
+                content: content,
+                datetime: `${dateStr} - الساعة ${timeStr}`
+            });
+
+            input.value = '';
+            saveState();
+            renderNotes();
+        }
+
+        function deleteNote(id) {
+            state.notes = state.notes.filter(n => n.id !== id);
+            saveState();
+            renderNotes();
+        }
+
+        function renderNotes() {
+            const notesContainer = document.getElementById('notesList');
+            if (!state.notes || state.notes.length === 0) {
+                notesContainer.innerHTML = `<div class="empty-msg">لا توجد مذكرات مكتوبة بعد.</div>`;
+                return;
+            }
+
+            notesContainer.innerHTML = state.notes.map(note => `
+            <div class="note-card">
+            <div class="note-header">
+            <span class="note-datetime">${note.datetime}</span>
+            <button class="delete-btn" onclick="deleteNote(${note.id})">حذف</button>
+            </div>
+            <div class="note-content">${note.content}</div>
+            </div>
+            `).join('');
+        }
+
+        function updateUI() {
+            document.getElementById('levelNum').textContent = `المستوى ${state.level}`;
+            document.getElementById('levelName').textContent = getLevelTitle(state.level);
+            document.getElementById('xpFill').style.width = `${state.xp}%`;
+            document.getElementById('xpText').textContent = `${state.xp} / 100 XP`;
+            document.getElementById('coinsDisplay').textContent = state.coins;
+
+            document.getElementById('shieldsDisplay').textContent = `الدروع المتاحة: ${state.shields}`;
+            document.getElementById('streakDisplay').textContent = `${state.level} يوم`;
+            renderFlame(state.level);
+
+            const vipSection = document.getElementById('vipThemesSection');
+            if (state.isVip) {
+                vipSection.style.display = 'block';
+                document.getElementById('vipStatusContainer').innerHTML = `<span class="level-badge" style="background: rgba(245, 158, 11, 0.2); color: var(--gold); font-size: 1rem;">أنت مشترك في VIP 👑</span>`;
+            }
+
+            const listContainer = document.getElementById('habitList');
+            if (state.habits.length === 0) {
+                listContainer.innerHTML = `<div class="empty-msg">لا توجد عادات مضافة بعد. اضف عادتك الأولى بالأعلى!</div>`;
+                return;
+            }
+
+            listContainer.innerHTML = state.habits.map(habit => `
+            <div class="habit-card ${habit.completed ? 'completed' : ''}">
+                <div class="habit-info">
+                    <button class="check-btn" onclick="toggleHabit(${habit.id})" ${habit.completed ? 'disabled' : ''}>
+                        ${habit.completed ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+                    </button>
+                    <span class="habit-title">${habit.title}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="color: #fbbf24; font-size: 0.9rem; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                        +5 <img src="1 (9).png" width="16" alt="Coin">
+                    </span>
+                    <button class="delete-btn" onclick="deleteHabit(${habit.id})" title="حذف المهمة">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            `).join('');
+        }
+
+        function renderHistoryGrouped() {
+            const historyContainer = document.getElementById('historyList');
+            if (!state.history || state.history.length === 0) {
+                historyContainer.innerHTML = `<div class="empty-msg">لا توجد إنجازات مسجلة بعد. أكمل بعض العادات لتراها هنا!</div>`;
+                return;
+            }
+
+            const groups = {};
+            state.history.forEach(item => {
+                const dateKey = item.dayDate || 'إنجازات سابقة';
+                if (!groups[dateKey]) groups[dateKey] = [];
+                groups[dateKey].push(item);
+            });
+
+            let html = '';
+            for (const [dayDate, tasks] of Object.entries(groups)) {
+                html += `
+                <div class="history-group">
+                <div class="history-group-title">${dayDate}</div>
+                ${tasks.map(t => `
+                <div class="history-card">
+                <span class="history-title">${t.title}</span>
+                <span class="history-time">${t.time || ''}</span>
+                </div>
+                `).join('')}
+                </div>
+                `;
+            }
+
+            historyContainer.innerHTML = html;
+        }
+
+        function switchChartType(type) {
+            currentChartType = type;
+            document.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (type === 'weekly') {
+                document.querySelectorAll('.sub-tab-btn')[0].classList.add('active');
+            } else {
+                document.querySelectorAll('.sub-tab-btn')[1].classList.add('active');
+            }
+            renderChart();
+        }
+
+        let chartInstance = null;
+        function renderChart() {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const isWeekly = currentChartType === 'weekly';
+            const labels = isWeekly
+                ? ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+                : ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+            let dataPoints = new Array(labels.length).fill(0);
+
+            if (state.history && state.history.length > 0) {
+                state.history.forEach(item => {
+                    if (item.timestamp) {
+                        const date = new Date(item.timestamp);
+                        if (isWeekly) {
+                            const dayIndex = date.getDay();
+                            dataPoints[dayIndex] += (item.xpGained || 3);
+                        } else {
+                            const monthIndex = date.getMonth();
+                            dataPoints[monthIndex] += (item.xpGained || 3);
+                        }
+                    }
+                });
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: isWeekly ? 'الإنجاز الأسبوعي الفعلي (XP)' : 'الإنجاز السنوي الفعلي (XP)',
+                        data: dataPoints,
+                        borderColor: getComputedStyle(document.body).getPropertyValue('--primary').trim() || '#6c5ce7',
+                        backgroundColor: 'rgba(108, 92, 231, 0.15)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { labels: { color: '#f8fafc' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Initialize App
+        loadState();
+    </script>
+</body>
+</html>
